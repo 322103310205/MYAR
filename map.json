@@ -1,0 +1,90 @@
+{
+  "nodes": [
+    {
+      "id": "GATE",
+      "name": "Main Gate",
+      "position": { "x": 10, "y": 35 },
+      "connections": ["B13"]
+    },
+
+    {
+      "id": "ROAD",
+      "name": "Internal Road",
+      "position": { "x": 0, "y": 0 },
+      "connections": [
+        "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8",
+        "B9", "B10", "B11", "B12", "B13"
+      ]
+    },
+
+    {
+      "id": "B2",
+      "name": "Admin Block",
+      "position": { "x": 0, "y": -5 },
+      "connections": ["ROAD"]
+    },
+
+    
+    {
+      "id": "B3",
+      "position": { "x": -10, "y": 5 },
+      "connections": ["ROAD", "B4"]
+    },
+    {
+      "id": "B4",
+      "position": { "x": -10, "y": 10 },
+      "connections": ["ROAD", "B3", "B5"]
+    },
+    {
+      "id": "B5",
+      "position": { "x": -10, "y": 15 },
+      "connections": ["ROAD", "B4", "B6"]
+    },
+    {
+      "id": "B6",
+      "position": { "x": -10, "y": 20 },
+      "connections": ["ROAD", "B5", "B7"]
+    },
+    {
+      "id": "B7",
+      "position": { "x": -10, "y": 25 },
+      "connections": ["ROAD", "B6", "B8"]
+    },
+    {
+      "id": "B8",
+      "position": { "x": -10, "y": 30 },
+      "connections": ["ROAD", "B7"]
+    },
+
+    {
+      "id": "B1",
+      "position": { "x": 10, "y": 5 },
+      "connections": ["ROAD", "B9"]
+    },
+    {
+      "id": "B9",
+      "position": { "x": 10, "y": 10 },
+      "connections": ["ROAD", "B1", "B10"]
+    },
+    {
+      "id": "B10",
+      "position": { "x": 10, "y": 15 },
+      "connections": ["ROAD", "B9", "B11"]
+    },
+    {
+      "id": "B11",
+      "position": { "x": 10, "y": 20 },
+      "connections": ["ROAD", "B10", "B12"]
+    },
+    {
+      "id": "B12",
+      "position": { "x": 10, "y": 25 },
+      "connections": ["ROAD", "B11", "B13"]
+    },
+    {
+      "id": "B13",
+      "position": { "x": 10, "y": 30 },
+      "connections": ["ROAD", "B12", "GATE"]
+    }
+  ]
+}

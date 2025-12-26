@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AR Navigation</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+  <!-- AR.js -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+
+  <!-- Navigation Logic -->
+  <script src="js/navigation.js"></script>
+  <script src="js/gps.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      font-family: sans-serif;
+    }
+
+    #startAR {
+      position: fixed;
+      z-index: 9999;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 14px 22px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+    }
+
+    #navUI {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<button id="startAR">Start AR</button>
+
+<div id="navUI">
+  <label>Destination:</label>
+  <select id="destination">
+    <option value="">Select</option>
+    <option>B1</option><option>B2</option><option>B3</option>
+    <option>B4</option><option>B5</option><option>B6</option>
+    <option>B7</option><option>B8</option><option>B9</option>
+    <option>B10</option><option>B11</option><option>B12</option>
+    <option>B13</option>
+  </select>
+  <button id="navigateBtn">Navigate</button>
+</div>
+
+<a-scene
+  id="scene"
+  embedded
+  style="display:none"
+  vr-mode-ui="enabled:false"
+  arjs="sourceType:webcam; debugUIEnabled:false;"
+>
+
+  <!-- NAVIGATION ARROW (single, reusable) -->
+  <a-entity
+    id="navArrow"
+    position="0 0 0"
+    visible="false"
+    animation__float="
+      property: position;
+      from: 0 0 0;
+      to: 0 0.05 0;
+      dir: alternate;
+      dur: 800;
+      loop: true;
+      easing: easeInOutSine"
+  >
+    <a-cylinder position="0 0.35 0" radius="0.05" height="0.5" color="#00ff00"></a-cylinder>
+    <a-cone position="0 0.7 0" radius-bottom="0.15" radius-top="0" height="0.25" color="#00ff00"></a-cone>
+  </a-entity>
+
+  <!-- QR MARKERS -->
+  <a-marker type="pattern" url="markers/GATE.patt" markerhandler="node: GATE"></a-marker>
+
+  <a-marker type="pattern" url="markers/B1.patt" markerhandler="node: B1"></a-marker>
+  <a-marker type="pattern" url="markers/B3.patt" markerhandler="node: B3"></a-marker>
+  <a-marker type="pattern" url="markers/B4.patt" markerhandler="node: B4"></a-marker>
+  <a-marker type="pattern" url="markers/B5.patt" markerhandler="node: B5"></a-marker>
+  <a-marker type="pattern" url="markers/B6.patt" markerhandler="node: B6"></a-marker>
+  <a-marker type="pattern" url="markers/B7.patt" markerhandler="node: B7"></a-marker>
+  <a-marker type="pattern" url="markers/B8.patt" markerhandler="node: B8"></a-marker>
+
+  <a-marker type="pattern" url="markers/B9.patt" markerhandler="node: B9"></a-marker>
+  <a-marker type="pattern" url="markers/B10.patt" markerhandler="node: B10"></a-marker>
+  <a-marker type="pattern" url="markers/B11.patt" markerhandler="node: B11"></a-marker>
+  <a-marker type="pattern" url="markers/B12.patt" markerhandler="node: B12"></a-marker>
+  <a-marker type="pattern" url="markers/B13.patt" markerhandler="node: B13"></a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+/* ---------- START AR ---------- */
+document.getElementById('startAR').addEventListener('click', () => {
+  document.getElementById('startAR').style.display = 'none';
+  document.getElementById('scene').style.display = 'block';
+  document.getElementById('navUI').style.display = 'block';
+});
+
+/* ---------- NAVIGATE ---------- */
+document.getElementById("navigateBtn").addEventListener("click", () => {
+  const dest = document.getElementById("destination").value;
+  if (!dest) return alert("Select destination");
+
+  const step = navigateTo(dest);
+  if (step) rotateArrow(step.action);
+});
+
+/* ---------- ARROW ROTATION ---------- */
+function rotateArrow(action) {
+  const arrow = document.getElementById("navArrow");
+  arrow.setAttribute("visible", "true");
+
+  const angles = {
+    START_FORWARD: 0,
+    FORWARD: 0,
+    LEFT: -90,
+    RIGHT: 90,
+    BACK: 180
+  };
+
+  arrow.setAttribute(
+    "animation__rotate",
+    `property: rotation; to: 0 ${angles[action]} 0; dur: 500; easing: easeOutQuad`
+  );
+}
+
+/* ---------- QR HANDLER ---------- */
+AFRAME.registerComponent("markerhandler", {
+  schema: { node: { type: "string" } },
+
+  init: function () {
+    this.el.addEventListener("markerFound", () => {
+      const node = this.data.node;
+      console.log("QR detected:", node);
+
+      setStartNode(node);
+
+      const nextStep = onNodeReached(node);
+      if (nextStep) rotateArrow(nextStep.action);
+    });
+  }
+});
+</script>
+
+</body>
+</html>
