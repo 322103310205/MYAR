@@ -1,51 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR Navigation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Navigation (QR Only)</title>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-  <!-- AR.js -->
+  <!-- AR.js (camera only, no markers) -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-  <!-- Navigation Logic -->
+  <!-- QR Scanner -->
+  <script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+
+  <!-- Navigation -->
   <script src="js/navigation.js"></script>
   <script src="js/gps.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
-      font-family: sans-serif;
-    }
-
+    body { margin: 0; overflow: hidden; background: black; }
     #startAR {
       position: fixed;
-      z-index: 9999;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       padding: 14px 22px;
       font-size: 18px;
-      border: none;
-      border-radius: 8px;
       background: #007bff;
       color: white;
+      border: none;
+      border-radius: 8px;
+      z-index: 10;
     }
-
     #navUI {
       position: fixed;
-      top: 10px;
-      left: 50%;
+      top: 10px; left: 50%;
       transform: translateX(-50%);
-      z-index: 9999;
       background: rgba(0,0,0,0.7);
+      color: white;
       padding: 10px;
       border-radius: 8px;
-      color: white;
+      z-index: 10;
       display: none;
     }
   </style>
@@ -56,9 +50,8 @@
 <button id="startAR">Start AR</button>
 
 <div id="navUI">
-  <label>Destination:</label>
   <select id="destination">
-    <option value="">Select</option>
+    <option value="">Select destination</option>
     <option>B1</option><option>B2</option><option>B3</option>
     <option>B4</option><option>B5</option><option>B6</option>
     <option>B7</option><option>B8</option><option>B9</option>
@@ -76,64 +69,88 @@
   arjs="sourceType:webcam; debugUIEnabled:false;"
 >
 
-  <!-- NAVIGATION ARROW (single, reusable) -->
-  <a-entity
-    id="navArrow"
-    position="0 0 0"
-    visible="false"
-    animation__float="
-      property: position;
-      from: 0 0 0;
-      to: 0 0.05 0;
-      dir: alternate;
-      dur: 800;
-      loop: true;
-      easing: easeInOutSine"
-  >
-    <a-cylinder position="0 0.35 0" radius="0.05" height="0.5" color="#00ff00"></a-cylinder>
-    <a-cone position="0 0.7 0" radius-bottom="0.15" radius-top="0" height="0.25" color="#00ff00"></a-cone>
+  <!-- Arrow always in front of camera -->
+  <a-entity camera>
+    <a-entity
+      id="navArrow"
+      position="0 -0.5 -2"
+      rotation="0 0 0"
+      visible="false"
+      animation__float="
+        property: position;
+        from: 0 -0.5 -2;
+        to: 0 -0.45 -2;
+        dir: alternate;
+        dur: 800;
+        loop: true;">
+      <a-cylinder position="0 0.35 0" radius="0.05" height="0.5" color="#00ff00"></a-cylinder>
+      <a-cone position="0 0.7 0" radius-bottom="0.15" radius-top="0" height="0.25" color="#00ff00"></a-cone>
+    </a-entity>
   </a-entity>
 
-  <!-- QR MARKERS -->
-  <a-marker type="pattern" url="markers/GATE.patt" markerhandler="node: GATE"></a-marker>
-
-  <a-marker type="pattern" url="markers/B1.patt" markerhandler="node: B1"></a-marker>
-  <a-marker type="pattern" url="markers/B3.patt" markerhandler="node: B3"></a-marker>
-  <a-marker type="pattern" url="markers/B4.patt" markerhandler="node: B4"></a-marker>
-  <a-marker type="pattern" url="markers/B5.patt" markerhandler="node: B5"></a-marker>
-  <a-marker type="pattern" url="markers/B6.patt" markerhandler="node: B6"></a-marker>
-  <a-marker type="pattern" url="markers/B7.patt" markerhandler="node: B7"></a-marker>
-  <a-marker type="pattern" url="markers/B8.patt" markerhandler="node: B8"></a-marker>
-
-  <a-marker type="pattern" url="markers/B9.patt" markerhandler="node: B9"></a-marker>
-  <a-marker type="pattern" url="markers/B10.patt" markerhandler="node: B10"></a-marker>
-  <a-marker type="pattern" url="markers/B11.patt" markerhandler="node: B11"></a-marker>
-  <a-marker type="pattern" url="markers/B12.patt" markerhandler="node: B12"></a-marker>
-  <a-marker type="pattern" url="markers/B13.patt" markerhandler="node: B13"></a-marker>
-
-  <a-entity camera></a-entity>
 </a-scene>
 
-<script>
-/* ---------- START AR ---------- */
-document.getElementById('startAR').addEventListener('click', () => {
-  document.getElementById('startAR').style.display = 'none';
-  document.getElementById('scene').style.display = 'block';
-  document.getElementById('navUI').style.display = 'block';
-});
+<canvas id="qrCanvas" style="display:none;"></canvas>
 
-/* ---------- NAVIGATE ---------- */
-document.getElementById("navigateBtn").addEventListener("click", () => {
+<script>
+const startBtn = document.getElementById("startAR");
+const scene = document.getElementById("scene");
+const navUI = document.getElementById("navUI");
+const arrow = document.getElementById("navArrow");
+
+let video, canvas, ctx;
+let lastQR = null;
+
+/* ---------- START AR ---------- */
+startBtn.onclick = () => {
+  startBtn.style.display = "none";
+  scene.style.display = "block";
+  navUI.style.display = "block";
+
+  setTimeout(startQRScanner, 1000);
+};
+
+/* ---------- NAVIGATION ---------- */
+document.getElementById("navigateBtn").onclick = () => {
   const dest = document.getElementById("destination").value;
   if (!dest) return alert("Select destination");
 
   const step = navigateTo(dest);
-  if (step) rotateArrow(step.action);
-});
+  if (step) updateArrow(step.action);
+};
+
+/* ---------- QR SCANNING ---------- */
+function startQRScanner() {
+  video = document.querySelector("video");
+  canvas = document.getElementById("qrCanvas");
+  ctx = canvas.getContext("2d");
+  requestAnimationFrame(scanQR);
+}
+
+function scanQR() {
+  if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+
+    if (code && code.data !== lastQR) {
+      lastQR = code.data.trim();
+      console.log("QR detected:", lastQR);
+
+      setStartNode(lastQR);
+
+      const next = onNodeReached(lastQR);
+      if (next) updateArrow(next.action);
+    }
+  }
+  requestAnimationFrame(scanQR);
+}
 
 /* ---------- ARROW ROTATION ---------- */
-function rotateArrow(action) {
-  const arrow = document.getElementById("navArrow");
+function updateArrow(action) {
   arrow.setAttribute("visible", "true");
 
   const angles = {
@@ -144,28 +161,8 @@ function rotateArrow(action) {
     BACK: 180
   };
 
-  arrow.setAttribute(
-    "animation__rotate",
-    `property: rotation; to: 0 ${angles[action]} 0; dur: 500; easing: easeOutQuad`
-  );
+  arrow.setAttribute("rotation", `0 ${angles[action]} 0`);
 }
-
-/* ---------- QR HANDLER ---------- */
-AFRAME.registerComponent("markerhandler", {
-  schema: { node: { type: "string" } },
-
-  init: function () {
-    this.el.addEventListener("markerFound", () => {
-      const node = this.data.node;
-      console.log("QR detected:", node);
-
-      setStartNode(node);
-
-      const nextStep = onNodeReached(node);
-      if (nextStep) rotateArrow(nextStep.action);
-    });
-  }
-});
 </script>
 
 </body>
