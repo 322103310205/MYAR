@@ -156,6 +156,10 @@ function extractDirections(path) {
 /* ---------- PUBLIC NAVIGATION API ---------- */
 
 function navigateTo(destination) {
+  if (!startNode) {
+    alert("Scan a QR code first");
+    return null;
+  }
   if (!graph[destination]) {
     console.warn("Invalid destination:", destination);
     return null;
